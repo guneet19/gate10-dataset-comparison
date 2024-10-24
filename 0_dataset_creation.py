@@ -6,13 +6,14 @@ import opengate.tests.utility as tu
 
 if __name__ == "__main__":
     paths = tu.get_default_test_paths(__file__, "")
-    paths.data = paths.current
+    # paths.data = paths.current
 
     print(f"The information insides paths variable is {paths}")
 
     # create simulation
     sim = gate.Simulation()
     sim.g4_verbose = True
+    sim.output_dir = paths.output
 
     # units
     m = gate.g4_units.m
@@ -42,7 +43,7 @@ if __name__ == "__main__":
     # crystal 
     # verified with C++ macro files
     crystal = sim.add_volume("Box", "crystal")
-    crystal.attached_to = optical_system.name
+    crystal.mother = optical_system.name
     crystal.size = [3 * mm, 3 * mm, 20 * mm]
     crystal.translation = [0 * mm, 0 * mm, 10 * mm]
     crystal.material = "BGO"
@@ -50,7 +51,7 @@ if __name__ == "__main__":
     # grease
     # verified with C++ macro files
     grease = sim.add_volume("Box", "grease")
-    grease.attached_to = optical_system.name
+    grease.mother = optical_system.name
     grease.size = [3 * mm, 3 * mm, 0.015 * mm]
     grease.material = "Epoxy"
     grease.translation = [0 * mm, 0 * mm, 20.0075 * mm]
@@ -58,7 +59,7 @@ if __name__ == "__main__":
     # pixel
     # verified with C++ macro files 
     pixel = sim.add_volume("Box", "pixel")
-    pixel.attached_to = optical_system.name
+    pixel.mother = optical_system.name
     pixel.size = [3 * mm, 3 * mm, 0.1 * mm]
     pixel.material = "SiO2"
     pixel.translation = [0 * mm, 0 * mm, 20.065 * mm]
@@ -82,24 +83,24 @@ if __name__ == "__main__":
     opt_surf_optical_system_to_crystal = sim.physics_manager.add_optical_surface(
         volume_from="optical_system",
         volume_to="crystal",
-        g4_surface_name="RoughESR_LUT",
+        g4_surface_name="Customized3_LUT",
     )
 
     opt_surf_crystal_to_optical_system = sim.physics_manager.add_optical_surface(
-        "crystal", "optical_system", "RoughESR_LUT"
+        "crystal", "optical_system", "Customized3_LUT"
     )
 
     # Rough_LUT.z -> Customized2_LUT.z
     # Rough_LUTR.z -> Customized2_LUTR.z
-    opt_surf_grease_to_crystal = sim.physics_manager.add_optical_surface("grease", "crystal", "Rough_LUT")
+    opt_surf_grease_to_crystal = sim.physics_manager.add_optical_surface("grease", "crystal", "Customized2_LUT")
 
-    opt_surf_crystal_to_grease = sim.physics_manager.add_optical_surface("crystal", "grease", "Rough_LUT")
+    opt_surf_crystal_to_grease = sim.physics_manager.add_optical_surface("crystal", "grease", "Customized2_LUT")
 
     # RoughESRGrease_LUT.z -> Customized4_LUT.z
     # RoughESRGrease_LUTR.z -> Customized4_LUTR.z
-    opt_surface_pixel_to_grease = sim.physics_manager.add_optical_surface("pixel", "grease", "RoughESRGrease_LUT")
+    opt_surface_pixel_to_grease = sim.physics_manager.add_optical_surface("pixel", "grease", "Customized4_LUT")
 
-    opt_surf_grease_to_pixel = sim.physics_manager.add_optical_surface("grease", "pixel", "RoughESRGrease_LUT")
+    opt_surf_grease_to_pixel = sim.physics_manager.add_optical_surface("grease", "pixel", "Customized4_LUT")
 
     # source user info
     # verified with C++ macro files
@@ -109,7 +110,7 @@ if __name__ == "__main__":
     source.energy.mono = 420 * keV
     source.position.type = "sphere"
     source.position.radius = 0 * mm
-    source.activity = 10 * Bq
+    source.activity = 1000 * Bq
     source.direction.type = "iso"
     source.direction.theta = [163 * deg, 165 * deg]
     source.direction.phi = [100 * deg, 110 * deg]
@@ -119,7 +120,7 @@ if __name__ == "__main__":
     # verified with C++ macro files 
     phase = sim.add_actor("PhaseSpaceActor", "Phase")
     phase.attached_to = pixel.name
-    phase.output = paths.output / "test075_optigan_create_dataset.root"
+    phase.output_filename = "test075_optigan_create_dataset_carlotta_simu_exiting_phase_space.root"
     phase.attributes = [
         "EventID",
         "ParticleName",
@@ -128,6 +129,9 @@ if __name__ == "__main__":
         "ParentID",
         "Direction",
         "KineticEnergy",
+        "PreKineticEnergy",
+        "PostKineticEnergy",
+        "TotalEnergyDeposit",
         "LocalTime",
         "GlobalTime",
         "TimeFromBeginOfEvent",
@@ -136,12 +140,15 @@ if __name__ == "__main__":
         "TrackLength",
         "PDGCode",
     ]
+    phase.steps_to_store = "exiting"
+
 
     # optical_adder = sim.add_actor("HitsReadoutActor", "Singles")
     # optical_adder.input_digi_collection = "Hits"
 
+   
     sim.user_hook_after_run = gate.userhooks.user_hook_dump_material_properties
     sim.run()
 
-    is_ok = all(t is True for t in sim.output.hook_log)
+    is_ok = all(t is True for t in sim.user_hook_log)
     tu.test_ok(is_ok)
