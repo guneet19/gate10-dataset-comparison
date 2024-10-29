@@ -1,0 +1,5 @@
+root_files/test075_optigan_create_dataset_carlotta_simu_entering_phase_space.root filter=lfs diff=lfs merge=lfs -text
+root_files/test075_optigan_create_dataset_carlotta_simu_entering_phase_space_filtered_positive_dz.root filter=lfs diff=lfs merge=lfs -text
+root_files/test075_optigan_create_dataset_carlotta_simu_exiting_phase_space.root filter=lfs diff=lfs merge=lfs -text
+root_files/test075_optigan_create_dataset_carlotta_simu_first_phase_space.root filter=lfs diff=lfs merge=lfs -text
+root_files/test075_optigan_create_dataset_carlotta_simu_sensitive_detector.root filter=lfs diff=lfs merge=lfs -text
