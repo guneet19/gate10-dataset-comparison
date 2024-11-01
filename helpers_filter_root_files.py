@@ -2,6 +2,11 @@ import uproot
 import pandas as pd
 import os
 
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+#FIX_ME - Need to refactor into a class.  
+
 # Path variables
 # Parent folder where all root sub-directories are present.
 simu_root_files_parent_folder = "/Users/data_machine/Work/pyGate/opengate/opengate/tests/output/gate10_dataset_comparison"
@@ -15,6 +20,7 @@ Root file categories based on filtering:
 simu_unfiltered_root_files_folder = os.path.join(simu_root_files_parent_folder, "non_filtered_root_files")
 simu_filtered_global_root_files_folder = os.path.join(simu_root_files_parent_folder, "filtered_root_files")
 
+# DELETE - These path variables are now redundant.
 """
 Inside simu_filtered_root_files_folder, root files are divided based on filter used.
 - simu_positive_dZ_filtered_root_files_folder: Path to store root files with +dZ filter.
@@ -35,6 +41,7 @@ simu_gt_threshold_pos_Z_root_files_folder = os.path.join(simu_filtered_global_ro
 def save_to_root(dataframe, filename):
     with uproot.recreate(filename) as file:
         file["tree"] = dataframe
+        return file["tree"]
 
 # Loop through the root files in simu_unfiltered_root_files_folder.
 for simu_unfiltered_root_file_name in os.listdir(simu_unfiltered_root_files_folder):
@@ -69,18 +76,57 @@ for simu_unfiltered_root_file_name in os.listdir(simu_unfiltered_root_files_fold
         }
 
         """
+        Create root files from data filtered from simulation root files. 
         - root_file_filter_folder: Folder in which final filtered root files are created.
         - final_filtered_root_file_save_path: Path of the filtered root file. 
         """
         for file_name, data in file_names.items():
+            filtered_tree = None
+
             root_file_filter_folder = os.path.join(simu_filtered_individual_root_file_folder, file_name.replace(".root", ""))
             os.makedirs(root_file_filter_folder, exist_ok=True)
 
             final_filtered_root_file_save_path = os.path.join(root_file_filter_folder, file_name)
-
+            exists = os.path.exists(final_filtered_root_file_save_path)
+            
+            if not exists:
             # Create root file. 
-            save_to_root(data, final_filtered_root_file_save_path)
+                print("I am inside if statement")
+                filtered_tree = save_to_root(data, final_filtered_root_file_save_path)
+                print(f"The information of the tree is {tree}")
 
+            print(filtered_tree)
+
+            """
+            Create histogram graphs for each filter. 
+            """
+            # Filtered root file graphs folder
+            root_file_histograms_graphs_folder = os.path.join(root_file_filter_folder, "distribution_graphs")
+            os.makedirs(root_file_histograms_graphs_folder, exist_ok=True)
+
+            if filtered_tree == None:
+                with uproot.open(final_filtered_root_file_save_path) as simu_root_file:
+                    filtered_tree = simu_root_file["tree"]
+
+            for branch_name, branch in filtered_tree.iteritems():
+                data = branch.array()
+
+                # Plot and save histogram for this branch
+                plt.figure(figsize=(10,6))
+                plt.ticklabel_format(axis='x', style='plain')
+                sns.histplot(data, bins=50, kde=False, color="teal")
+                plt.title(f"Histograms of {branch_name}", fontsize=16, fontweight='bold')
+                plt.xlabel(branch_name, fontsize=14)
+                plt.ylabel("Frequency", fontsize=14)
+
+                # Improve layout
+                plt.tight_layout()
+
+                simu_root_distribution_graph_output_path = os.path.join(root_file_histograms_graphs_folder, f"{branch_name}_histogram.png")
+                plt.savefig(simu_root_distribution_graph_output_path, dpi=300)
+                plt.close()
+
+        # DELETE after testing.
         # Debug statements.
         print(f"The length of unfiltered df is {len(df)}")
         print(f"The length of lt_threshold_filtered_pos_Z_df is {len(lt_threshold_filtered_pos_Z_df)}")
